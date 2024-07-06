@@ -3,11 +3,13 @@ import axios from 'axios';
 import { Link } from 'react-router-dom';
 import './Home.css';
 
+const apiUrl = 'https://nomad-backend-3fb0.onrender.com';
+
 const Home = () => {
     const [machines, setMachines] = useState([]);
 
     useEffect(() => {
-        axios.get('/machines')
+        axios.get(`${apiUrl}/machines`)
             .then(response => setMachines(response.data))
             .catch(error => console.error('Error fetching machines:', error));
     }, []);
@@ -46,9 +48,9 @@ const Home = () => {
                             <td>{machine.name}</td>
                             <td>{machine.status}</td>
                             <td>
-                                {machine.issues && machine.issues.split(',').map(issue => (
-                                    <div key={issue} style={{ color: getStatusColor(issue.severity) }}>
-                                        {issue}
+                                {machine.issues && machine.issues.map(issue => (
+                                    <div key={issue.id} style={{ color: getStatusColor(issue.severity) }}>
+                                        {issue.issue}
                                     </div>
                                 ))}
                             </td>

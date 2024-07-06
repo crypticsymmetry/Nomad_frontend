@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
+const apiUrl = 'https://nomad-backend-3fb0.onrender.com';
+
 const IssueForm = ({ machineId, onIssueAdded }) => {
     const [issue, setIssue] = useState('');
     const [note, setNote] = useState('');
 
     const handleSubmit = (event) => {
         event.preventDefault();
-        axios.post(`/machines/${machineId}/issues`, { issue, note })
+        axios.post(`${apiUrl}/machines/${machineId}/issues`, { issue, note })
             .then(response => {
-                onIssueAdded(issue, note);
+                onIssueAdded(response.data);
                 setIssue('');
                 setNote('');
             })

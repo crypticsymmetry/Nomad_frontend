@@ -2,13 +2,15 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useHistory } from 'react-router-dom';
 
+const apiUrl = 'https://nomad-backend-3fb0.onrender.com';
+
 const MachineForm = () => {
     const [name, setName] = useState('');
     const history = useHistory();
 
     const handleSubmit = (event) => {
         event.preventDefault();
-        axios.post('/machines', { name })
+        axios.post(`${apiUrl}/machines`, { name })
             .then(response => {
                 history.push('/');
             })
