@@ -4,8 +4,6 @@ import Home from './components/Home';
 import MachineDetail from './components/MachineDetail';
 import MachineForm from './components/MachineForm';
 
-const API_URL = 'https://nomad-backend-1.onrender.com';  // Replace with your Render backend URL
-
 const App = () => {
     return (
         <Router>
