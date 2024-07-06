@@ -3,13 +3,11 @@ import axios from 'axios';
 import { Link } from 'react-router-dom';
 import './Home.css';
 
-const apiUrl = process.env.REACT_APP_API_URL;
-
 const Home = () => {
     const [machines, setMachines] = useState([]);
 
     useEffect(() => {
-        axios.get(`${apiUrl}/machines`)
+        axios.get('/machines')
             .then(response => setMachines(response.data))
             .catch(error => console.error('Error fetching machines:', error));
     }, []);
@@ -48,9 +46,9 @@ const Home = () => {
                             <td>{machine.name}</td>
                             <td>{machine.status}</td>
                             <td>
-                                {machine.issues && machine.issues.map(issue => (
-                                    <div key={issue.id} style={{ color: getStatusColor(issue.severity) }}>
-                                        {issue.issue}
+                                {machine.issues && machine.issues.split(',').map(issue => (
+                                    <div key={issue} style={{ color: getStatusColor(issue.severity) }}>
+                                        {issue}
                                     </div>
                                 ))}
                             </td>

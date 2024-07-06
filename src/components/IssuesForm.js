@@ -1,17 +1,15 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
-const apiUrl = process.env.REACT_APP_API_URL;
-
 const IssueForm = ({ machineId, onIssueAdded }) => {
     const [issue, setIssue] = useState('');
     const [note, setNote] = useState('');
 
     const handleSubmit = (event) => {
         event.preventDefault();
-        axios.post(`${apiUrl}/machines/${machineId}/issues`, { issue, note })
+        axios.post(`/machines/${machineId}/issues`, { issue, note })
             .then(response => {
-                onIssueAdded(response.data);
+                onIssueAdded(issue, note);
                 setIssue('');
                 setNote('');
             })

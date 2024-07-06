@@ -2,15 +2,13 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useHistory } from 'react-router-dom';
 
-const apiUrl = process.env.REACT_APP_API_URL;
-
 const MachineForm = () => {
     const [name, setName] = useState('');
     const history = useHistory();
 
     const handleSubmit = (event) => {
         event.preventDefault();
-        axios.post(`${apiUrl}/machines`, { name })
+        axios.post('/machines', { name })
             .then(response => {
                 history.push('/');
             })

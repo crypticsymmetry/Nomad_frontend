@@ -4,8 +4,6 @@ import { useParams, Link } from 'react-router-dom';
 import Select from 'react-select';
 import './MachineDetail.css';
 
-const apiUrl = process.env.REACT_APP_API_URL;
-
 const MachineDetail = () => {
     const { id } = useParams();
     const [machine, setMachine] = useState(null);
@@ -15,7 +13,7 @@ const MachineDetail = () => {
     const [severity, setSeverity] = useState('green');
 
     useEffect(() => {
-        axios.get(`${apiUrl}/machines/${id}`)
+        axios.get(`/machines/${id}`)
             .then(response => {
                 const machineData = response.data;
                 if (!Array.isArray(machineData.issues)) {
@@ -25,7 +23,7 @@ const MachineDetail = () => {
             })
             .catch(error => console.error('Error fetching machine:', error));
 
-        axios.get(`${apiUrl}/issues-file`)
+        axios.get('/issues-file')
             .then(response => {
                 setIssuesOptions(response.data.map(issue => ({ value: issue, label: issue })));
             })
@@ -35,25 +33,25 @@ const MachineDetail = () => {
     const uploadPhoto = (event) => {
         const formData = new FormData();
         formData.append('photo', event.target.files[0]);
-        axios.post(`${apiUrl}/machines/${id}/photo`, formData)
+        axios.post(`/machines/${id}/photo`, formData)
             .then(response => setMachine({ ...machine, photo: response.data.photo }))
             .catch(error => console.error('Error uploading photo:', error));
     };
 
     const startTimer = () => {
-        axios.post(`${apiUrl}/machines/${id}/start`)
+        axios.post(`/machines/${id}/start`)
             .then(() => setMachine({ ...machine, status: 'Started' }))
             .catch(error => console.error('Error starting timer:', error));
     };
 
     const pauseTimer = () => {
-        axios.post(`${apiUrl}/machines/${id}/pause`)
+        axios.post(`/machines/${id}/pause`)
             .then(() => setMachine({ ...machine, status: 'Paused' }))
             .catch(error => console.error('Error pausing timer:', error));
     };
 
     const stopTimer = () => {
-        axios.post(`${apiUrl}/machines/${id}/stop`)
+        axios.post(`/machines/${id}/stop`)
             .then(() => setMachine({ ...machine, status: 'Stopped/Finished' }))
             .catch(error => console.error('Error stopping timer:', error));
     };
@@ -63,7 +61,7 @@ const MachineDetail = () => {
             alert('Please select an issue.');
             return;
         }
-        axios.post(`${apiUrl}/machines/${id}/issues`, { issue: selectedIssue.value, note, severity })
+        axios.post(`/machines/${id}/issues`, { issue: selectedIssue.value, note, severity })
             .then(response => {
                 setMachine({
                     ...machine,
@@ -76,7 +74,7 @@ const MachineDetail = () => {
     };
 
     const removeIssue = (issueId) => {
-        axios.delete(`${apiUrl}/machines/${id}/issues/${issueId}`)
+        axios.delete(`/machines/${id}/issues/${issueId}`)
             .then(response => {
                 setMachine({
                     ...machine,
@@ -87,7 +85,7 @@ const MachineDetail = () => {
     };
 
     const updateNote = (issueId) => {
-        axios.put(`${apiUrl}/machines/${id}/issues/${issueId}/note`, { note })
+        axios.put(`/machines/${id}/issues/${issueId}/note`, { note })
             .then(response => {
                 setMachine({
                     ...machine,
@@ -98,7 +96,7 @@ const MachineDetail = () => {
     };
 
     const updateSeverity = (issueId, newSeverity) => {
-        axios.put(`${apiUrl}/machines/${id}/issues/${issueId}/severity`, { severity: newSeverity })
+        axios.put(`/machines/${id}/issues/${issueId}/severity`, { severity: newSeverity })
             .then(response => {
                 setMachine({
                     ...machine,
