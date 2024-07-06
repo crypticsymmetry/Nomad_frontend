@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
-const apiUrl = 'https://nomad-backend-1.onrender.com';
+const apiUrl = process.env.REACT_APP_API_URL;
 
 const IssueForm = ({ machineId, onIssueAdded }) => {
     const [issue, setIssue] = useState('');

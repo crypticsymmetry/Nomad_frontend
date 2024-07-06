@@ -3,7 +3,7 @@ import axios from 'axios';
 import { Link } from 'react-router-dom';
 import './Home.css';
 
-const apiUrl = 'https://nomad-backend-1.onrender.com';
+const apiUrl = process.env.REACT_APP_API_URL;
 
 const Home = () => {
     const [machines, setMachines] = useState([]);
