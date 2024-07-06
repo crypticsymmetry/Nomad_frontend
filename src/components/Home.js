@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Link } from 'react-router-dom';
-import axios from './axiosConfig'; // Use the configured Axios instance
 import './Home.css';
 
 const Home = () => {
@@ -35,6 +35,7 @@ const Home = () => {
                         <th>ID</th>
                         <th>Name</th>
                         <th>Status</th>
+                        <th>Worker</th>
                         <th>Issues</th>
                         <th>Time Spent</th>
                     </tr>
@@ -45,6 +46,7 @@ const Home = () => {
                             <td>{machine.id}</td>
                             <td>{machine.name}</td>
                             <td>{machine.status}</td>
+                            <td>{machine.worker_name}</td>
                             <td>
                                 {machine.issues && machine.issues.split(',').map(issue => (
                                     <div key={issue} style={{ color: getStatusColor(issue.severity) }}>
