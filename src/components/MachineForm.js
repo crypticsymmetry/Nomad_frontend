@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { useHistory } from 'react-router-dom';
 
-const apiUrl = 'https://nomad-backend-3fb0.onrender.com';
+const apiUrl = 'https://nomad-backend-1.onrender.com';
 
 const MachineForm = () => {
     const [name, setName] = useState('');

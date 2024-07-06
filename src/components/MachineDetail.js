@@ -4,7 +4,7 @@ import { useParams, Link } from 'react-router-dom';
 import Select from 'react-select';
 import './MachineDetail.css';
 
-const apiUrl = 'https://nomad-backend-3fb0.onrender.com';
+const apiUrl = 'https://nomad-backend-1.onrender.com';
 
 const MachineDetail = () => {
     const { id } = useParams();
