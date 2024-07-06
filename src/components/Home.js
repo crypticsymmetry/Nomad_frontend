@@ -25,6 +25,14 @@ const Home = () => {
         }
     };
 
+    const handleRemoveMachine = (id) => {
+        axios.delete(`/machines/${id}`)
+            .then(() => {
+                setMachines(machines.filter(machine => machine.id !== id));
+            })
+            .catch(error => console.error('Error removing machine:', error));
+    };
+
     return (
         <div className="home-container">
             <h1>Powersports Shop Management</h1>
@@ -38,6 +46,7 @@ const Home = () => {
                         <th>Worker</th>
                         <th>Issues</th>
                         <th>Time Spent</th>
+                        <th>Actions</th> {/* Add Actions column */}
                     </tr>
                 </thead>
                 <tbody>
@@ -59,6 +68,7 @@ const Home = () => {
                             </td>
                             <td>
                                 <Link to={`/machines/${machine.id}`} className="button">Details</Link>
+                                <button onClick={() => handleRemoveMachine(machine.id)} className="button">Remove</button> {/* Add Remove button */}
                             </td>
                         </tr>
                     ))}
