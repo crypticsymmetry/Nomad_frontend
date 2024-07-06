@@ -125,6 +125,7 @@ const MachineDetail = () => {
         <div className="machine-detail-container">
             <h1>{machine.name}</h1>
             <p>Status: {machine.status}</p>
+            <p>Worker: {machine.worker_name}</p> {/* Display the worker name */}
             <p>Issues:</p>
             <ul>
                 {machine.issues.map((issue, index) => (
