@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import db from '../firebaseConfig'; // Import Firestore
+import { db, storage } from '../firebaseConfig'; // Use named imports
 import { useParams, Link } from 'react-router-dom';
 import Select from 'react-select';
 import './MachineDetail.css';
@@ -36,7 +36,7 @@ const MachineDetail = () => {
 
     const uploadPhoto = (event) => {
         const file = event.target.files[0];
-        const storageRef = firebase.storage().ref();
+        const storageRef = storage.ref();
         const photoRef = storageRef.child(`images/${file.name}`);
         photoRef.put(file).then(() => {
             photoRef.getDownloadURL().then((url) => {
