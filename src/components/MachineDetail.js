@@ -32,20 +32,21 @@ const MachineDetail = () => {
       .catch(error => console.error('Error fetching issues file:', error));
   }, [id]);
 
-  const uploadPhoto = (event) => {
-    const file = event.target.files[0];
-    const formData = new FormData();
-    formData.append('photo', file);
+  const uploadPhoto = async (event) => {
+      const file = event.target.files[0];
+      const formData = new FormData();
+      formData.append('photo', file);
 
-    axios.post(`/machines/${id}/photo`, formData)
-      .then(response => {
-        const photoPath = response.data.photo;
-        db.collection('machines').doc(id).update({ photo: photoPath })
-          .then(() => setMachine(prevMachine => ({ ...prevMachine, photo: photoPath })))
-          .catch(error => console.error('Error updating machine photo:', error));
-      })
-      .catch(error => console.error('Error uploading photo:', error));
+      try {
+          const response = await axios.post(`/machines/${id}/photo`, formData, {
+              headers: { 'Content-Type': 'multipart/form-data' }
+          });
+          setMachine(prevMachine => ({ ...prevMachine, photo: response.data.photo }));
+      } catch (error) {
+          console.error('Error uploading photo:', error);
+      }
   };
+
 
   const startInspectionTimer = () => {
     db.collection('machines').doc(id).update({
