@@ -7,18 +7,21 @@ const Home = () => {
     const [machines, setMachines] = useState([]);
 
     useEffect(() => {
-        const unsubscribe = db.collection('machines').onSnapshot(snapshot => {
+        const unsubscribe = db.collection('machines').onSnapshot(async snapshot => {
             const machinesData = [];
-            snapshot.forEach(doc => {
+            for (const doc of snapshot.docs) {
                 const data = doc.data();
+                const issuesSnapshot = await db.collection('issues').where('machine_id', '==', doc.id).get();
+                const issues = issuesSnapshot.docs.map(issueDoc => issueDoc.data().issue).join(', ');
                 machinesData.push({
                     id: doc.id,
                     ...data,
+                    issues,
                     total_time: secondsToHMS(data.total_time),
                     inspection_total_time: secondsToHMS(data.inspection_total_time),
                     servicing_total_time: secondsToHMS(data.servicing_total_time),
                 });
-            });
+            }
             setMachines(machinesData);
         });
 
@@ -70,7 +73,7 @@ const Home = () => {
                             <td>{machine.status}</td>
                             <td>{machine.worker_name}</td>
                             <td>
-                                {machine.issues && machine.issues.split(',').map(issue => (
+                                {machine.issues.split(',').map(issue => (
                                     <div key={issue} style={{ color: getStatusColor(issue.severity) }}>
                                         {issue}
                                     </div>
