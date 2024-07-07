@@ -40,9 +40,7 @@ const MachineDetail = () => {
         axios.post(`/machines/${id}/photo`, formData)
         .then(response => {
             const photoPath = response.data.photo;
-            db.collection('machines').doc(id).update({ photo: photoPath })
-            .then(() => setMachine(prevMachine => ({ ...prevMachine, photo: photoPath })))
-            .catch(error => console.error('Error updating machine photo:', error));
+            setMachine(prevMachine => ({ ...prevMachine, photo: photoPath }));
         })
         .catch(error => console.error('Error uploading photo:', error));
     };
