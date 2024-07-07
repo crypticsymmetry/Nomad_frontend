@@ -34,15 +34,17 @@ const MachineDetail = () => {
 
     const uploadPhoto = (event) => {
         const file = event.target.files[0];
-        const storageRef = storage.ref();
-        const photoRef = storageRef.child(`images/${file.name}`);
-        photoRef.put(file).then(() => {
-            photoRef.getDownloadURL().then((url) => {
-                db.collection('machines').doc(id).update({ photo: url })
-                .then(() => setMachine({ ...machine, photo: url }))
-                .catch(error => console.error('Error uploading photo:', error));
-            });
-        });
+        const formData = new FormData();
+        formData.append('photo', file);
+
+        axios.post(`/machines/${id}/photo`, formData)
+        .then(response => {
+            const photoPath = response.data.photo;
+            db.collection('machines').doc(id).update({ photo: photoPath })
+            .then(() => setMachine(prevMachine => ({ ...prevMachine, photo: photoPath })))
+            .catch(error => console.error('Error updating machine photo:', error));
+        })
+        .catch(error => console.error('Error uploading photo:', error));
     };
 
     const startInspectionTimer = () => {
@@ -50,7 +52,7 @@ const MachineDetail = () => {
             inspection_start_time: new Date().toISOString(),
             status: 'Started',
         })
-        .then(() => setMachine({ ...machine, status: 'Started' }))
+        .then(() => setMachine(prevMachine => ({ ...prevMachine, status: 'Started' })))
         .catch(error => console.error('Error starting inspection timer:', error));
     };
 
@@ -66,7 +68,7 @@ const MachineDetail = () => {
                 inspection_total_time: newTotalTime,
                 status: 'Paused',
             })
-            .then(() => setMachine({ ...machine, status: 'Paused' }))
+            .then(() => setMachine(prevMachine => ({ ...prevMachine, status: 'Paused' })))
             .catch(error => console.error('Error pausing inspection timer:', error));
         });
     };
@@ -83,7 +85,7 @@ const MachineDetail = () => {
                 inspection_total_time: newTotalTime,
                 status: 'Stopped/Finished',
             })
-            .then(() => setMachine({ ...machine, status: 'Stopped/Finished' }))
+            .then(() => setMachine(prevMachine => ({ ...prevMachine, status: 'Stopped/Finished' })))
             .catch(error => console.error('Error stopping inspection timer:', error));
         });
     };
@@ -93,7 +95,7 @@ const MachineDetail = () => {
             servicing_start_time: new Date().toISOString(),
             status: 'Started',
         })
-        .then(() => setMachine({ ...machine, status: 'Started' }))
+        .then(() => setMachine(prevMachine => ({ ...prevMachine, status: 'Started' })))
         .catch(error => console.error('Error starting servicing timer:', error));
     };
 
@@ -109,7 +111,7 @@ const MachineDetail = () => {
                 servicing_total_time: newTotalTime,
                 status: 'Paused',
             })
-            .then(() => setMachine({ ...machine, status: 'Paused' }))
+            .then(() => setMachine(prevMachine => ({ ...prevMachine, status: 'Paused' })))
             .catch(error => console.error('Error pausing servicing timer:', error));
         });
     };
@@ -126,7 +128,7 @@ const MachineDetail = () => {
                 servicing_total_time: newTotalTime,
                 status: 'Stopped/Finished',
             })
-            .then(() => setMachine({ ...machine, status: 'Stopped/Finished' }))
+            .then(() => setMachine(prevMachine => ({ ...prevMachine, status: 'Stopped/Finished' })))
             .catch(error => console.error('Error stopping servicing timer:', error));
         });
     };
@@ -151,7 +153,7 @@ const MachineDetail = () => {
                 snapshot.forEach(doc => {
                     issues.push({ id: doc.id, ...doc.data() });
                 });
-                setMachine({ ...machine, issues });
+                setMachine(prevMachine => ({ ...prevMachine, issues }));
                 setSelectedIssue(null);
                 setNote('');
             });
@@ -168,7 +170,7 @@ const MachineDetail = () => {
                 snapshot.forEach(doc => {
                     issues.push({ id: doc.id, ...doc.data() });
                 });
-                setMachine({ ...machine, issues });
+                setMachine(prevMachine => ({ ...prevMachine, issues }));
             });
         })
         .catch(error => console.error('Error removing issue:', error));
@@ -183,7 +185,7 @@ const MachineDetail = () => {
                 snapshot.forEach(doc => {
                     issues.push({ id: doc.id, ...doc.data() });
                 });
-                setMachine({ ...machine, issues });
+                setMachine(prevMachine => ({ ...prevMachine, issues }));
             });
         })
         .catch(error => console.error('Error updating note:', error));
@@ -198,7 +200,7 @@ const MachineDetail = () => {
                 snapshot.forEach(doc => {
                     issues.push({ id: doc.id, ...doc.data() });
                 });
-                setMachine({ ...machine, issues });
+                setMachine(prevMachine => ({ ...prevMachine, issues }));
             });
         })
         .catch(error => console.error('Error updating severity:', error));
