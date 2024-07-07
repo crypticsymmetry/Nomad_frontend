@@ -282,7 +282,6 @@ const MachineDetail = () => {
         </div>
     );
 };
-
 export default MachineDetail;
 
 function secondsToHMS(seconds) {
