@@ -224,6 +224,7 @@ const MachineDetail = () => {
             <h1>{machine.name}</h1>
             <p>Status: {machine.status}</p>
             <p>Worker: {machine.worker_name}</p> {/* Display the worker name */}
+            <p>Total Time: {machine.total_time}</p>
             <p>Inspection Time: {machine.inspection_total_time}</p>
             <p>Servicing Time: {machine.servicing_total_time}</p>
             <p>Issues:</p>
