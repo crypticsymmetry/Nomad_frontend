@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { db, storage } from '../firebaseConfig'; // Use named imports
+import { db, storage } from '../firebaseConfig';
 import { useParams, Link } from 'react-router-dom';
+import { doc, getDoc, updateDoc, collection, query, where, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import Select from 'react-select';
 import axios from 'axios';
 import './MachineDetail.css';
@@ -15,9 +17,10 @@ const MachineDetail = () => {
 
   useEffect(() => {
     const fetchMachine = async () => {
-      const machineDoc = await db.collection('machines').doc(id).get();
+      const machineDoc = await getDoc(doc(db, 'machines', id));
       const machineData = machineDoc.data();
-      const issuesSnapshot = await db.collection('issues').where('machine_id', '==', id).get();
+      const issuesQuery = query(collection(db, 'issues'), where('machine_id', '==', id));
+      const issuesSnapshot = await getDocs(issuesQuery);
       const issues = issuesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setMachine({ ...machineData, issues });
     };
@@ -32,180 +35,174 @@ const MachineDetail = () => {
       .catch(error => console.error('Error fetching issues file:', error));
   }, [id]);
 
-  const uploadPhoto = (event) => {
+  const uploadPhoto = async (event) => {
     const file = event.target.files[0];
-    const formData = new FormData();
-    formData.append('photo', file);
-
-    axios.post(`/machines/${id}/photo`, formData)
-      .then(response => {
-        const photoPath = response.data.photo;
-        db.collection('machines').doc(id).update({ photo: photoPath })
-          .then(() => setMachine(prevMachine => ({ ...prevMachine, photo: photoPath })))
-          .catch(error => console.error('Error updating machine photo:', error));
-      })
-      .catch(error => console.error('Error uploading photo:', error));
+    const fileRef = ref(storage, `machines/${id}/${file.name}`);
+    try {
+      await uploadBytes(fileRef, file);
+      const photoURL = await getDownloadURL(fileRef);
+      await updateDoc(doc(db, 'machines', id), { photo: photoURL });
+      setMachine(prevMachine => ({ ...prevMachine, photo: photoURL }));
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+    }
   };
 
-
-
-  const startInspectionTimer = () => {
-    db.collection('machines').doc(id).update({
-      inspection_start_time: new Date().toISOString(),
-      status: 'Started',
-    })
-      .then(() => setMachine(prevMachine => ({ ...prevMachine, status: 'Started' })))
-      .catch(error => console.error('Error starting inspection timer:', error));
-  };
-
-  const pauseInspectionTimer = () => {
-    db.collection('machines').doc(id).get()
-      .then(doc => {
-        const data = doc.data();
-        const startTime = new Date(data.inspection_start_time);
-        const elapsed = (new Date() - startTime) / 1000;
-        const newTotalTime = data.inspection_total_time + elapsed;
-        db.collection('machines').doc(id).update({
-          inspection_start_time: null,
-          inspection_total_time: newTotalTime,
-          status: 'Paused',
-        })
-          .then(() => setMachine(prevMachine => ({ ...prevMachine, status: 'Paused' })))
-          .catch(error => console.error('Error pausing inspection timer:', error));
+  const startInspectionTimer = async () => {
+    try {
+      await updateDoc(doc(db, 'machines', id), {
+        inspection_start_time: new Date().toISOString(),
+        status: 'Started',
       });
+      setMachine(prevMachine => ({ ...prevMachine, status: 'Started' }));
+    } catch (error) {
+      console.error('Error starting inspection timer:', error);
+    }
   };
 
-  const stopInspectionTimer = () => {
-    db.collection('machines').doc(id).get()
-      .then(doc => {
-        const data = doc.data();
-        const startTime = new Date(data.inspection_start_time);
-        const elapsed = (new Date() - startTime) / 1000;
-        const newTotalTime = data.inspection_total_time + elapsed;
-        db.collection('machines').doc(id).update({
-          inspection_start_time: null,
-          inspection_total_time: newTotalTime,
-          status: 'Stopped/Finished',
-        })
-          .then(() => setMachine(prevMachine => ({ ...prevMachine, status: 'Stopped/Finished' })))
-          .catch(error => console.error('Error stopping inspection timer:', error));
+  const pauseInspectionTimer = async () => {
+    const machineDoc = await getDoc(doc(db, 'machines', id));
+    const data = machineDoc.data();
+    const startTime = new Date(data.inspection_start_time);
+    const elapsed = (new Date() - startTime) / 1000;
+    const newTotalTime = data.inspection_total_time + elapsed;
+    try {
+      await updateDoc(doc(db, 'machines', id), {
+        inspection_start_time: null,
+        inspection_total_time: newTotalTime,
+        status: 'Paused',
       });
+      setMachine(prevMachine => ({ ...prevMachine, status: 'Paused' }));
+    } catch (error) {
+      console.error('Error pausing inspection timer:', error);
+    }
   };
 
-  const startServicingTimer = () => {
-    db.collection('machines').doc(id).update({
-      servicing_start_time: new Date().toISOString(),
-      status: 'Started',
-    })
-      .then(() => setMachine(prevMachine => ({ ...prevMachine, status: 'Started' })))
-      .catch(error => console.error('Error starting servicing timer:', error));
-  };
-
-  const pauseServicingTimer = () => {
-    db.collection('machines').doc(id).get()
-      .then(doc => {
-        const data = doc.data();
-        const startTime = new Date(data.servicing_start_time);
-        const elapsed = (new Date() - startTime) / 1000;
-        const newTotalTime = data.servicing_total_time + elapsed;
-        db.collection('machines').doc(id).update({
-          servicing_start_time: null,
-          servicing_total_time: newTotalTime,
-          status: 'Paused',
-        })
-          .then(() => setMachine(prevMachine => ({ ...prevMachine, status: 'Paused' })))
-          .catch(error => console.error('Error pausing servicing timer:', error));
+  const stopInspectionTimer = async () => {
+    const machineDoc = await getDoc(doc(db, 'machines', id));
+    const data = machineDoc.data();
+    const startTime = new Date(data.inspection_start_time);
+    const elapsed = (new Date() - startTime) / 1000;
+    const newTotalTime = data.inspection_total_time + elapsed;
+    try {
+      await updateDoc(doc(db, 'machines', id), {
+        inspection_start_time: null,
+        inspection_total_time: newTotalTime,
+        status: 'Stopped/Finished',
       });
+      setMachine(prevMachine => ({ ...prevMachine, status: 'Stopped/Finished' }));
+    } catch (error) {
+      console.error('Error stopping inspection timer:', error);
+    }
   };
 
-  const stopServicingTimer = () => {
-    db.collection('machines').doc(id).get()
-      .then(doc => {
-        const data = doc.data();
-        const startTime = new Date(data.servicing_start_time);
-        const elapsed = (new Date() - startTime) / 1000;
-        const newTotalTime = data.servicing_total_time + elapsed;
-        db.collection('machines').doc(id).update({
-          servicing_start_time: null,
-          servicing_total_time: newTotalTime,
-          status: 'Stopped/Finished',
-        })
-          .then(() => setMachine(prevMachine => ({ ...prevMachine, status: 'Stopped/Finished' })))
-          .catch(error => console.error('Error stopping servicing timer:', error));
+  const startServicingTimer = async () => {
+    try {
+      await updateDoc(doc(db, 'machines', id), {
+        servicing_start_time: new Date().toISOString(),
+        status: 'Started',
       });
+      setMachine(prevMachine => ({ ...prevMachine, status: 'Started' }));
+    } catch (error) {
+      console.error('Error starting servicing timer:', error);
+    }
   };
 
-  const addIssue = () => {
+  const pauseServicingTimer = async () => {
+    const machineDoc = await getDoc(doc(db, 'machines', id));
+    const data = machineDoc.data();
+    const startTime = new Date(data.servicing_start_time);
+    const elapsed = (new Date() - startTime) / 1000;
+    const newTotalTime = data.servicing_total_time + elapsed;
+    try {
+      await updateDoc(doc(db, 'machines', id), {
+        servicing_start_time: null,
+        servicing_total_time: newTotalTime,
+        status: 'Paused',
+      });
+      setMachine(prevMachine => ({ ...prevMachine, status: 'Paused' }));
+    } catch (error) {
+      console.error('Error pausing servicing timer:', error);
+    }
+  };
+
+  const stopServicingTimer = async () => {
+    const machineDoc = await getDoc(doc(db, 'machines', id));
+    const data = machineDoc.data();
+    const startTime = new Date(data.servicing_start_time);
+    const elapsed = (new Date() - startTime) / 1000;
+    const newTotalTime = data.servicing_total_time + elapsed;
+    try {
+      await updateDoc(doc(db, 'machines', id), {
+        servicing_start_time: null,
+        servicing_total_time: newTotalTime,
+        status: 'Stopped/Finished',
+      });
+      setMachine(prevMachine => ({ ...prevMachine, status: 'Stopped/Finished' }));
+    } catch (error) {
+      console.error('Error stopping servicing timer:', error);
+    }
+  };
+
+  const addIssue = async () => {
     if (!selectedIssue) {
       alert('Please select an issue.');
       return;
     }
-    db.collection('issues').add({
-      machine_id: id,
-      issue: selectedIssue.value,
-      status: 'Pending',
-      note,
-      severity,
-      created_at: new Date().toISOString(),
-    })
-      .then(() => {
-        db.collection('issues').where('machine_id', '==', id).get()
-          .then(snapshot => {
-            const issues = [];
-            snapshot.forEach(doc => {
-              issues.push({ id: doc.id, ...doc.data() });
-            });
-            setMachine(prevMachine => ({ ...prevMachine, issues }));
-            setSelectedIssue(null);
-            setNote('');
-          });
-      })
-      .catch(error => console.error('Error adding issue:', error));
+    try {
+      await addDoc(collection(db, 'issues'), {
+        machine_id: id,
+        issue: selectedIssue.value,
+        status: 'Pending',
+        note,
+        severity,
+        created_at: new Date().toISOString(),
+      });
+      const issuesQuery = query(collection(db, 'issues'), where('machine_id', '==', id));
+      const issuesSnapshot = await getDocs(issuesQuery);
+      const issues = issuesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setMachine(prevMachine => ({ ...prevMachine, issues }));
+      setSelectedIssue(null);
+      setNote('');
+    } catch (error) {
+      console.error('Error adding issue:', error);
+    }
   };
 
-  const removeIssue = (issueId) => {
-    db.collection('issues').doc(issueId).delete()
-      .then(() => {
-        db.collection('issues').where('machine_id', '==', id).get()
-          .then(snapshot => {
-            const issues = [];
-            snapshot.forEach(doc => {
-              issues.push({ id: doc.id, ...doc.data() });
-            });
-            setMachine(prevMachine => ({ ...prevMachine, issues }));
-          });
-      })
-      .catch(error => console.error('Error removing issue:', error));
+  const removeIssue = async (issueId) => {
+    try {
+      await deleteDoc(doc(db, 'issues', issueId));
+      const issuesQuery = query(collection(db, 'issues'), where('machine_id', '==', id));
+      const issuesSnapshot = await getDocs(issuesQuery);
+      const issues = issuesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setMachine(prevMachine => ({ ...prevMachine, issues }));
+    } catch (error) {
+      console.error('Error removing issue:', error);
+    }
   };
 
-  const updateNote = (issueId) => {
-    db.collection('issues').doc(issueId).update({ note })
-      .then(() => {
-        db.collection('issues').where('machine_id', '==', id).get()
-          .then(snapshot => {
-            const issues = [];
-            snapshot.forEach(doc => {
-              issues.push({ id: doc.id, ...doc.data() });
-            });
-            setMachine(prevMachine => ({ ...prevMachine, issues }));
-          });
-      })
-      .catch(error => console.error('Error updating note:', error));
+  const updateNote = async (issueId) => {
+    try {
+      await updateDoc(doc(db, 'issues', issueId), { note });
+      const issuesQuery = query(collection(db, 'issues'), where('machine_id', '==', id));
+      const issuesSnapshot = await getDocs(issuesQuery);
+      const issues = issuesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setMachine(prevMachine => ({ ...prevMachine, issues }));
+    } catch (error) {
+      console.error('Error updating note:', error);
+    }
   };
 
-  const updateSeverity = (issueId, newSeverity) => {
-    db.collection('issues').doc(issueId).update({ severity: newSeverity })
-      .then(() => {
-        db.collection('issues').where('machine_id', '==', id).get()
-          .then(snapshot => {
-            const issues = [];
-            snapshot.forEach(doc => {
-              issues.push({ id: doc.id, ...doc.data() });
-            });
-            setMachine(prevMachine => ({ ...prevMachine, issues }));
-          });
-      })
-      .catch(error => console.error('Error updating severity:', error));
+  const updateSeverity = async (issueId, newSeverity) => {
+    try {
+      await updateDoc(doc(db, 'issues', issueId), { severity: newSeverity });
+      const issuesQuery = query(collection(db, 'issues'), where('machine_id', '==', id));
+      const issuesSnapshot = await getDocs(issuesQuery);
+      const issues = issuesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setMachine(prevMachine => ({ ...prevMachine, issues }));
+    } catch (error) {
+      console.error('Error updating severity:', error);
+    }
   };
 
   const getIssueColor = (severity) => {
