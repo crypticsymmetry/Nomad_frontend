@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import db from '../firebaseConfig'; // Import Firestore
 import { useParams, Link } from 'react-router-dom';
 import Select from 'react-select';
 import './MachineDetail.css';
@@ -13,65 +13,124 @@ const MachineDetail = () => {
     const [severity, setSeverity] = useState('green');
 
     useEffect(() => {
-        axios.get(`/machines/${id}`)
-            .then(response => {
-                const machineData = response.data;
-                if (!Array.isArray(machineData.issues)) {
-                    machineData.issues = [];
-                }
-                setMachine(machineData);
-            })
-            .catch(error => console.error('Error fetching machine:', error));
+        const unsubscribe = db.collection('machines').doc(id).onSnapshot(doc => {
+            const machineData = doc.data();
+            if (!Array.isArray(machineData.issues)) {
+                machineData.issues = [];
+            }
+            setMachine(machineData);
+        });
 
-        axios.get('/issues-file')
-            .then(response => {
-                setIssuesOptions(response.data.map(issue => ({ value: issue, label: issue })));
-            })
-            .catch(error => console.error('Error fetching issues file:', error));
+        db.collection('issues-file').get()
+        .then(snapshot => {
+            const options = [];
+            snapshot.forEach(doc => {
+                options.push({ value: doc.data().issue, label: doc.data().issue });
+            });
+            setIssuesOptions(options);
+        })
+        .catch(error => console.error('Error fetching issues file:', error));
+
+        return () => unsubscribe();
     }, [id]);
 
     const uploadPhoto = (event) => {
-        const formData = new FormData();
-        formData.append('photo', event.target.files[0]);
-        axios.post(`/machines/${id}/photo`, formData)
-            .then(response => setMachine({ ...machine, photo: response.data.photo }))
-            .catch(error => console.error('Error uploading photo:', error));
+        const file = event.target.files[0];
+        const storageRef = firebase.storage().ref();
+        const photoRef = storageRef.child(`images/${file.name}`);
+        photoRef.put(file).then(() => {
+            photoRef.getDownloadURL().then((url) => {
+                db.collection('machines').doc(id).update({ photo: url })
+                .then(() => setMachine({ ...machine, photo: url }))
+                .catch(error => console.error('Error uploading photo:', error));
+            });
+        });
     };
 
     const startInspectionTimer = () => {
-        axios.post(`/machines/${id}/inspection/start`)
-            .then(() => setMachine({ ...machine, status: 'Started' }))
-            .catch(error => console.error('Error starting inspection timer:', error));
+        db.collection('machines').doc(id).update({
+            inspection_start_time: new Date().toISOString(),
+            status: 'Started',
+        })
+        .then(() => setMachine({ ...machine, status: 'Started' }))
+        .catch(error => console.error('Error starting inspection timer:', error));
     };
 
     const pauseInspectionTimer = () => {
-        axios.post(`/machines/${id}/inspection/pause`)
+        db.collection('machines').doc(id).get()
+        .then(doc => {
+            const data = doc.data();
+            const startTime = new Date(data.inspection_start_time);
+            const elapsed = (new Date() - startTime) / 1000;
+            const newTotalTime = data.inspection_total_time + elapsed;
+            db.collection('machines').doc(id).update({
+                inspection_start_time: null,
+                inspection_total_time: newTotalTime,
+                status: 'Paused',
+            })
             .then(() => setMachine({ ...machine, status: 'Paused' }))
             .catch(error => console.error('Error pausing inspection timer:', error));
+        });
     };
 
     const stopInspectionTimer = () => {
-        axios.post(`/machines/${id}/inspection/stop`)
+        db.collection('machines').doc(id).get()
+        .then(doc => {
+            const data = doc.data();
+            const startTime = new Date(data.inspection_start_time);
+            const elapsed = (new Date() - startTime) / 1000;
+            const newTotalTime = data.inspection_total_time + elapsed;
+            db.collection('machines').doc(id).update({
+                inspection_start_time: null,
+                inspection_total_time: newTotalTime,
+                status: 'Stopped/Finished',
+            })
             .then(() => setMachine({ ...machine, status: 'Stopped/Finished' }))
             .catch(error => console.error('Error stopping inspection timer:', error));
+        });
     };
 
     const startServicingTimer = () => {
-        axios.post(`/machines/${id}/servicing/start`)
-            .then(() => setMachine({ ...machine, status: 'Started' }))
-            .catch(error => console.error('Error starting servicing timer:', error));
+        db.collection('machines').doc(id).update({
+            servicing_start_time: new Date().toISOString(),
+            status: 'Started',
+        })
+        .then(() => setMachine({ ...machine, status: 'Started' }))
+        .catch(error => console.error('Error starting servicing timer:', error));
     };
 
     const pauseServicingTimer = () => {
-        axios.post(`/machines/${id}/servicing/pause`)
+        db.collection('machines').doc(id).get()
+        .then(doc => {
+            const data = doc.data();
+            const startTime = new Date(data.servicing_start_time);
+            const elapsed = (new Date() - startTime) / 1000;
+            const newTotalTime = data.servicing_total_time + elapsed;
+            db.collection('machines').doc(id).update({
+                servicing_start_time: null,
+                servicing_total_time: newTotalTime,
+                status: 'Paused',
+            })
             .then(() => setMachine({ ...machine, status: 'Paused' }))
             .catch(error => console.error('Error pausing servicing timer:', error));
+        });
     };
 
     const stopServicingTimer = () => {
-        axios.post(`/machines/${id}/servicing/stop`)
+        db.collection('machines').doc(id).get()
+        .then(doc => {
+            const data = doc.data();
+            const startTime = new Date(data.servicing_start_time);
+            const elapsed = (new Date() - startTime) / 1000;
+            const newTotalTime = data.servicing_total_time + elapsed;
+            db.collection('machines').doc(id).update({
+                servicing_start_time: null,
+                servicing_total_time: newTotalTime,
+                status: 'Stopped/Finished',
+            })
             .then(() => setMachine({ ...machine, status: 'Stopped/Finished' }))
             .catch(error => console.error('Error stopping servicing timer:', error));
+        });
     };
 
     const addIssue = () => {
@@ -79,49 +138,72 @@ const MachineDetail = () => {
             alert('Please select an issue.');
             return;
         }
-        axios.post(`/machines/${id}/issues`, { issue: selectedIssue.value, note, severity })
-            .then(response => {
-                setMachine({
-                    ...machine,
-                    issues: response.data,
+        db.collection('issues').add({
+            machine_id: id,
+            issue: selectedIssue.value,
+            status: 'Pending',
+            note,
+            severity,
+            created_at: new Date().toISOString(),
+        })
+        .then(() => {
+            db.collection('issues').where('machine_id', '==', id).get()
+            .then(snapshot => {
+                const issues = [];
+                snapshot.forEach(doc => {
+                    issues.push(doc.data());
                 });
+                setMachine({ ...machine, issues });
                 setSelectedIssue(null);
                 setNote('');
-            })
-            .catch(error => console.error('Error adding issue:', error));
+            });
+        })
+        .catch(error => console.error('Error adding issue:', error));
     };
 
     const removeIssue = (issueId) => {
-        axios.delete(`/machines/${id}/issues/${issueId}`)
-            .then(response => {
-                setMachine({
-                    ...machine,
-                    issues: response.data,
+        db.collection('issues').doc(issueId).delete()
+        .then(() => {
+            db.collection('issues').where('machine_id', '==', id).get()
+            .then(snapshot => {
+                const issues = [];
+                snapshot.forEach(doc => {
+                    issues.push(doc.data());
                 });
-            })
-            .catch(error => console.error('Error removing issue:', error));
+                setMachine({ ...machine, issues });
+            });
+        })
+        .catch(error => console.error('Error removing issue:', error));
     };
 
     const updateNote = (issueId) => {
-        axios.put(`/machines/${id}/issues/${issueId}/note`, { note })
-            .then(response => {
-                setMachine({
-                    ...machine,
-                    issues: response.data,
+        db.collection('issues').doc(issueId).update({ note })
+        .then(() => {
+            db.collection('issues').where('machine_id', '==', id).get()
+            .then(snapshot => {
+                const issues = [];
+                snapshot.forEach(doc => {
+                    issues.push(doc.data());
                 });
-            })
-            .catch(error => console.error('Error updating note:', error));
+                setMachine({ ...machine, issues });
+            });
+        })
+        .catch(error => console.error('Error updating note:', error));
     };
 
     const updateSeverity = (issueId, newSeverity) => {
-        axios.put(`/machines/${id}/issues/${issueId}/severity`, { severity: newSeverity })
-            .then(response => {
-                setMachine({
-                    ...machine,
-                    issues: response.data,
+        db.collection('issues').doc(issueId).update({ severity: newSeverity })
+        .then(() => {
+            db.collection('issues').where('machine_id', '==', id).get()
+            .then(snapshot => {
+                const issues = [];
+                snapshot.forEach(doc => {
+                    issues.push(doc.data());
                 });
-            })
-            .catch(error => console.error('Error updating severity:', error));
+                setMachine({ ...machine, issues });
+            });
+        })
+        .catch(error => console.error('Error updating severity:', error));
     };
 
     const getIssueColor = (severity) => {
@@ -168,7 +250,7 @@ const MachineDetail = () => {
                 ))}
             </ul>
             <input type="file" onChange={uploadPhoto} />
-            {machine.photo && <img src={`/images/${machine.photo}`} alt="Machine" />}
+            {machine.photo && <img src={machine.photo} alt="Machine" />}
             <h2>Inspection Timer</h2>
             <button onClick={startInspectionTimer}>Start Inspection</button>
             <button onClick={pauseInspectionTimer}>Pause Inspection</button>
@@ -203,3 +285,9 @@ const MachineDetail = () => {
 };
 
 export default MachineDetail;
+
+function secondsToHMS(seconds) {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    return `${h}:${m < 10 ? '0' : ''}${m}`;
+}
