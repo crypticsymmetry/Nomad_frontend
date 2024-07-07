@@ -80,7 +80,11 @@ const Home = () => {
                                 ))}
                             </td>
                             <td style={{ color: getStatusColor(machine.status) }}>
-                                {machine.total_time}
+                                {`Total: ${machine.total_time}`}
+                                <br />
+                                {`Inspection: ${machine.inspection_total_time}`}
+                                <br />
+                                {`Servicing: ${machine.servicing_total_time}`}
                             </td>
                             <td>
                                 <Link to={`/machines/${machine.id}`} className="button">Details</Link>
