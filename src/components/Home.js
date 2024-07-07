@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../firebaseConfig'; // Use named import
+import { db } from '../firebaseConfig';
 import { collection, query, onSnapshot, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { Link } from 'react-router-dom';
 import './Home.css';
@@ -66,7 +66,7 @@ const Home = () => {
                         <th>Worker</th>
                         <th>Issues</th>
                         <th>Time Spent</th>
-                        <th>Actions</th> {/* Add Actions column */}
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -76,13 +76,7 @@ const Home = () => {
                             <td>{machine.name}</td>
                             <td>{machine.status}</td>
                             <td>{machine.worker_name}</td>
-                            <td>
-                                {machine.issues.split(',').map(issue => (
-                                    <div key={issue} style={{ color: getStatusColor(issue.severity) }}>
-                                        {issue}
-                                    </div>
-                                ))}
-                            </td>
+                            <td>{machine.issues}</td>
                             <td style={{ color: getStatusColor(machine.status) }}>
                                 {`Total: ${machine.total_time}`}
                                 <br />
@@ -92,7 +86,7 @@ const Home = () => {
                             </td>
                             <td>
                                 <Link to={`/machines/${machine.id}`} className="button">Details</Link>
-                                <button onClick={() => handleRemoveMachine(machine.id)} className="button">Remove</button> {/* Add Remove button */}
+                                <button onClick={() => handleRemoveMachine(machine.id)} className="button">Remove</button>
                             </td>
                         </tr>
                     ))}
