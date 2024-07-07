@@ -1,7 +1,8 @@
-import firebase from 'firebase/app';
-import 'firebase/firestore';
-import 'firebase/storage';
+import { initializeApp } from 'firebase/app';
+import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
+// Firebase configuration object
 const firebaseConfig = {
   apiKey: "AIzaSyCEjiw2NdpMSIuv0_VKXHzlrMywAyMtYg4",
   authDomain: "nomadpowersports-84e70.firebaseapp.com",
@@ -12,9 +13,11 @@ const firebaseConfig = {
   measurementId: "G-M1D1T3QZRX"
 };
 
-firebase.initializeApp(firebaseConfig);
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
 
-const db = firebase.firestore();
-const storage = firebase.storage();
+// Initialize Firestore and Storage
+const db = getFirestore(app);
+const storage = getStorage(app);
 
 export { db, storage };
