@@ -38,22 +38,40 @@ const MachineDetail = () => {
             .catch(error => console.error('Error uploading photo:', error));
     };
 
-    const startTimer = () => {
-        axios.post(`/machines/${id}/start`)
+    const startInspectionTimer = () => {
+        axios.post(`/machines/${id}/inspection/start`)
             .then(() => setMachine({ ...machine, status: 'Started' }))
-            .catch(error => console.error('Error starting timer:', error));
+            .catch(error => console.error('Error starting inspection timer:', error));
     };
 
-    const pauseTimer = () => {
-        axios.post(`/machines/${id}/pause`)
+    const pauseInspectionTimer = () => {
+        axios.post(`/machines/${id}/inspection/pause`)
             .then(() => setMachine({ ...machine, status: 'Paused' }))
-            .catch(error => console.error('Error pausing timer:', error));
+            .catch(error => console.error('Error pausing inspection timer:', error));
     };
 
-    const stopTimer = () => {
-        axios.post(`/machines/${id}/stop`)
+    const stopInspectionTimer = () => {
+        axios.post(`/machines/${id}/inspection/stop`)
             .then(() => setMachine({ ...machine, status: 'Stopped/Finished' }))
-            .catch(error => console.error('Error stopping timer:', error));
+            .catch(error => console.error('Error stopping inspection timer:', error));
+    };
+
+    const startServicingTimer = () => {
+        axios.post(`/machines/${id}/servicing/start`)
+            .then(() => setMachine({ ...machine, status: 'Started' }))
+            .catch(error => console.error('Error starting servicing timer:', error));
+    };
+
+    const pauseServicingTimer = () => {
+        axios.post(`/machines/${id}/servicing/pause`)
+            .then(() => setMachine({ ...machine, status: 'Paused' }))
+            .catch(error => console.error('Error pausing servicing timer:', error));
+    };
+
+    const stopServicingTimer = () => {
+        axios.post(`/machines/${id}/servicing/stop`)
+            .then(() => setMachine({ ...machine, status: 'Stopped/Finished' }))
+            .catch(error => console.error('Error stopping servicing timer:', error));
     };
 
     const addIssue = () => {
@@ -126,6 +144,8 @@ const MachineDetail = () => {
             <h1>{machine.name}</h1>
             <p>Status: {machine.status}</p>
             <p>Worker: {machine.worker_name}</p> {/* Display the worker name */}
+            <p>Inspection Time: {machine.inspection_total_time}</p>
+            <p>Servicing Time: {machine.servicing_total_time}</p>
             <p>Issues:</p>
             <ul>
                 {machine.issues.map((issue, index) => (
@@ -149,9 +169,14 @@ const MachineDetail = () => {
             </ul>
             <input type="file" onChange={uploadPhoto} />
             {machine.photo && <img src={`/images/${machine.photo}`} alt="Machine" />}
-            <button onClick={startTimer}>Start</button>
-            <button onClick={pauseTimer}>Pause</button>
-            <button onClick={stopTimer}>Stop</button>
+            <h2>Inspection Timer</h2>
+            <button onClick={startInspectionTimer}>Start Inspection</button>
+            <button onClick={pauseInspectionTimer}>Pause Inspection</button>
+            <button onClick={stopInspectionTimer}>Stop Inspection</button>
+            <h2>Servicing Timer</h2>
+            <button onClick={startServicingTimer}>Start Servicing</button>
+            <button onClick={pauseServicingTimer}>Pause Servicing</button>
+            <button onClick={stopServicingTimer}>Stop Servicing</button>
             <Select
                 value={selectedIssue}
                 onChange={setSelectedIssue}
