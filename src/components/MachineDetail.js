@@ -36,7 +36,7 @@ const MachineDetail = () => {
       const file = event.target.files[0];
       const formData = new FormData();
       formData.append('photo', file);
-
+  
       try {
           const response = await axios.post(`/machines/${id}/photo`, formData, {
               headers: { 'Content-Type': 'multipart/form-data' }
