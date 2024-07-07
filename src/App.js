@@ -1,19 +1,27 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
+import { auth, onAuthStateChanged } from './firebaseConfig';
 import Home from './components/Home';
-import MachineDetail from './components/MachineDetail';
-import MachineForm from './components/MachineForm';
+import Login from './components/Login';
+import PrivateRoute from './components/PrivateRoute';
 
 const App = () => {
-    return (
-        <Router>
-            <Switch>
-                <Route path="/" exact component={Home} />
-                <Route path="/machines/:id" component={MachineDetail} />
-                <Route path="/add-machine" component={MachineForm} />
-            </Switch>
-        </Router>
-    );
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+  }, []);
+
+  return (
+    <Router>
+      <Switch>
+        <PrivateRoute exact path="/" component={Home} user={user} />
+        <Route path="/login" component={Login} />
+      </Switch>
+    </Router>
+  );
 };
 
 export default App;
