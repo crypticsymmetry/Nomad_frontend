@@ -32,21 +32,21 @@ const MachineDetail = () => {
       .catch(error => console.error('Error fetching issues file:', error));
   }, [id]);
 
-  // Function to handle file upload
-  const uploadPhoto = async (event) => {
+  const uploadPhoto = (event) => {
     const file = event.target.files[0];
     const formData = new FormData();
     formData.append('photo', file);
 
-    try {
-      const response = await axios.post(`/machines/${id}/photo`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      setMachine(prevMachine => ({ ...prevMachine, photo: response.data.photo }));
-    } catch (error) {
-      console.error('Error uploading photo:', error);
-    }
+    axios.post(`/machines/${id}/photo`, formData)
+      .then(response => {
+        const photoPath = response.data.photo;
+        db.collection('machines').doc(id).update({ photo: photoPath })
+          .then(() => setMachine(prevMachine => ({ ...prevMachine, photo: photoPath })))
+          .catch(error => console.error('Error updating machine photo:', error));
+      })
+      .catch(error => console.error('Error uploading photo:', error));
   };
+
 
 
   const startInspectionTimer = () => {
@@ -227,7 +227,7 @@ const MachineDetail = () => {
     <div className="machine-detail-container">
       <h1>{machine.name}</h1>
       <p>Status: {machine.status}</p>
-      <p>Worker: {machine.worker_name}</p> {/* Display the worker name */}
+      <p>Worker: {machine.worker_name}</p>
       <p>Total Time: {machine.total_time}</p>
       <p>Inspection Time: {machine.inspection_total_time}</p>
       <p>Servicing Time: {machine.servicing_total_time}</p>
