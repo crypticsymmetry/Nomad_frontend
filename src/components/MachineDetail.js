@@ -14,13 +14,15 @@ const MachineDetail = () => {
     const [severity, setSeverity] = useState('green');
 
     useEffect(() => {
-        const unsubscribe = db.collection('machines').doc(id).onSnapshot(doc => {
-            const machineData = doc.data();
-            if (!Array.isArray(machineData.issues)) {
-                machineData.issues = [];
-            }
-            setMachine(machineData);
-        });
+        const fetchMachine = async () => {
+            const machineDoc = await db.collection('machines').doc(id).get();
+            const machineData = machineDoc.data();
+            const issuesSnapshot = await db.collection('issues').where('machine_id', '==', id).get();
+            const issues = issuesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setMachine({ ...machineData, issues });
+        };
+
+        fetchMachine();
 
         axios.get('/issues-file')
         .then(response => {
@@ -28,8 +30,6 @@ const MachineDetail = () => {
             setIssuesOptions(options);
         })
         .catch(error => console.error('Error fetching issues file:', error));
-
-        return () => unsubscribe();
     }, [id]);
 
     const uploadPhoto = (event) => {
