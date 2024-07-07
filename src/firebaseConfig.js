@@ -1,8 +1,8 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
 
-// Firebase configuration object
 const firebaseConfig = {
   apiKey: "AIzaSyCEjiw2NdpMSIuv0_VKXHzlrMywAyMtYg4",
   authDomain: "nomadpowersports-84e70.firebaseapp.com",
@@ -13,11 +13,9 @@ const firebaseConfig = {
   measurementId: "G-M1D1T3QZRX"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
-
-// Initialize Firestore and Storage
 const db = getFirestore(app);
 const storage = getStorage(app);
+const auth = getAuth(app);
 
-export { db, storage };
+export { db, storage, auth, signInWithEmailAndPassword, onAuthStateChanged };
