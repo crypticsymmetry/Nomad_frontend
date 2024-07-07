@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import db from '../firebaseConfig'; // Import Firestore
 import { Link } from 'react-router-dom';
 import './Home.css';
 
@@ -7,9 +7,22 @@ const Home = () => {
     const [machines, setMachines] = useState([]);
 
     useEffect(() => {
-        axios.get('/machines')
-            .then(response => setMachines(response.data))
-            .catch(error => console.error('Error fetching machines:', error));
+        const unsubscribe = db.collection('machines').onSnapshot(snapshot => {
+            const machinesData = [];
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                machinesData.push({
+                    id: doc.id,
+                    ...data,
+                    total_time: secondsToHMS(data.total_time),
+                    inspection_total_time: secondsToHMS(data.inspection_total_time),
+                    servicing_total_time: secondsToHMS(data.servicing_total_time),
+                });
+            });
+            setMachines(machinesData);
+        });
+
+        return () => unsubscribe();
     }, []);
 
     const getStatusColor = (status) => {
@@ -26,11 +39,11 @@ const Home = () => {
     };
 
     const handleRemoveMachine = (id) => {
-        axios.delete(`/machines/${id}`)
-            .then(() => {
-                setMachines(machines.filter(machine => machine.id !== id));
-            })
-            .catch(error => console.error('Error removing machine:', error));
+        db.collection('machines').doc(id).delete()
+        .then(() => {
+            setMachines(machines.filter(machine => machine.id !== id));
+        })
+        .catch(error => console.error('Error removing machine:', error));
     };
 
     return (
@@ -79,3 +92,9 @@ const Home = () => {
 };
 
 export default Home;
+
+function secondsToHMS(seconds) {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    return `${h}:${m < 10 ? '0' : ''}${m}`;
+}
