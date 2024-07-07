@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db, storage } from '../firebaseConfig'; // Use named imports
 import { useParams, Link } from 'react-router-dom';
 import Select from 'react-select';
+import axios from 'axios';
 import './MachineDetail.css';
 
 const MachineDetail = () => {
@@ -21,12 +22,9 @@ const MachineDetail = () => {
             setMachine(machineData);
         });
 
-        db.collection('issues-file').get()
-        .then(snapshot => {
-            const options = [];
-            snapshot.forEach(doc => {
-                options.push({ value: doc.data().issue, label: doc.data().issue });
-            });
+        axios.get('/issues-file')
+        .then(response => {
+            const options = response.data.map(issue => ({ value: issue, label: issue }));
             setIssuesOptions(options);
         })
         .catch(error => console.error('Error fetching issues file:', error));
