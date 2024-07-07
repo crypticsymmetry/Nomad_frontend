@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import db from '../firebaseConfig'; // Import Firestore
+import { db } from '../firebaseConfig'; // Use named import
 import { useHistory } from 'react-router-dom';
 
 const MachineForm = () => {
