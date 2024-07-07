@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../firebaseConfig';
-import { collection, query, onSnapshot, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import axios from 'axios';
 import { Link } from 'react-router-dom';
 import './Home.css';
 
@@ -8,27 +7,9 @@ const Home = () => {
     const [machines, setMachines] = useState([]);
 
     useEffect(() => {
-        const q = query(collection(db, 'machines'));
-        const unsubscribe = onSnapshot(q, async (snapshot) => {
-            const machinesData = [];
-            for (const docSnap of snapshot.docs) {
-                const data = docSnap.data();
-                const issuesQuery = query(collection(db, 'issues'), where('machine_id', '==', docSnap.id));
-                const issuesSnapshot = await getDocs(issuesQuery);
-                const issues = issuesSnapshot.docs.map(issueDoc => issueDoc.data().issue).join(', ');
-                machinesData.push({
-                    id: docSnap.id,
-                    ...data,
-                    issues,
-                    total_time: secondsToHMS(data.total_time),
-                    inspection_total_time: secondsToHMS(data.inspection_total_time),
-                    servicing_total_time: secondsToHMS(data.servicing_total_time),
-                });
-            }
-            setMachines(machinesData);
-        });
-
-        return () => unsubscribe();
+        axios.get('/machines')
+            .then(response => setMachines(response.data))
+            .catch(error => console.error('Error fetching machines:', error));
     }, []);
 
     const getStatusColor = (status) => {
@@ -44,15 +25,6 @@ const Home = () => {
         }
     };
 
-    const handleRemoveMachine = async (id) => {
-        try {
-            await deleteDoc(doc(db, 'machines', id));
-            setMachines(machines.filter(machine => machine.id !== id));
-        } catch (error) {
-            console.error('Error removing machine:', error);
-        }
-    };
-
     return (
         <div className="home-container">
             <h1>Powersports Shop Management</h1>
@@ -63,10 +35,8 @@ const Home = () => {
                         <th>ID</th>
                         <th>Name</th>
                         <th>Status</th>
-                        <th>Worker</th>
                         <th>Issues</th>
                         <th>Time Spent</th>
-                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -75,18 +45,18 @@ const Home = () => {
                             <td>{machine.id}</td>
                             <td>{machine.name}</td>
                             <td>{machine.status}</td>
-                            <td>{machine.worker_name}</td>
-                            <td>{machine.issues}</td>
+                            <td>
+                                {machine.issues && machine.issues.split(',').map(issue => (
+                                    <div key={issue} style={{ color: getStatusColor(issue.severity) }}>
+                                        {issue}
+                                    </div>
+                                ))}
+                            </td>
                             <td style={{ color: getStatusColor(machine.status) }}>
-                                {`Total: ${machine.total_time}`}
-                                <br />
-                                {`Inspection: ${machine.inspection_total_time}`}
-                                <br />
-                                {`Servicing: ${machine.servicing_total_time}`}
+                                {machine.total_time}
                             </td>
                             <td>
                                 <Link to={`/machines/${machine.id}`} className="button">Details</Link>
-                                <button onClick={() => handleRemoveMachine(machine.id)} className="button">Remove</button>
                             </td>
                         </tr>
                     ))}
@@ -97,9 +67,3 @@ const Home = () => {
 };
 
 export default Home;
-
-function secondsToHMS(seconds) {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    return `${h}:${m < 10 ? '0' : ''}${m}`;
-}

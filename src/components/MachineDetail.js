@@ -1,293 +1,178 @@
 import React, { useState, useEffect } from 'react';
-import { db, storage } from '../firebaseConfig';
-import { useParams, Link } from 'react-router-dom';
-import { doc, getDoc, updateDoc, collection, query, where, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import Select from 'react-select';
 import axios from 'axios';
+import { useParams, Link } from 'react-router-dom';
+import Select from 'react-select';
 import './MachineDetail.css';
 
 const MachineDetail = () => {
-  const { id } = useParams();
-  const [machine, setMachine] = useState(null);
-  const [issuesOptions, setIssuesOptions] = useState([]);
-  const [selectedIssue, setSelectedIssue] = useState(null);
-  const [note, setNote] = useState('');
-  const [severity, setSeverity] = useState('green');
+    const { id } = useParams();
+    const [machine, setMachine] = useState(null);
+    const [issuesOptions, setIssuesOptions] = useState([]);
+    const [selectedIssue, setSelectedIssue] = useState(null);
+    const [note, setNote] = useState('');
+    const [severity, setSeverity] = useState('green');
 
-  useEffect(() => {
-    const fetchMachine = async () => {
-      const machineDoc = await getDoc(doc(db, 'machines', id));
-      const machineData = machineDoc.data();
-      const issuesQuery = query(collection(db, 'issues'), where('machine_id', '==', id));
-      const issuesSnapshot = await getDocs(issuesQuery);
-      const issues = issuesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setMachine({ ...machineData, issues });
+    useEffect(() => {
+        axios.get(`/machines/${id}`)
+            .then(response => {
+                const machineData = response.data;
+                if (!Array.isArray(machineData.issues)) {
+                    machineData.issues = [];
+                }
+                setMachine(machineData);
+            })
+            .catch(error => console.error('Error fetching machine:', error));
+
+        axios.get('/issues-file')
+            .then(response => {
+                setIssuesOptions(response.data.map(issue => ({ value: issue, label: issue })));
+            })
+            .catch(error => console.error('Error fetching issues file:', error));
+    }, [id]);
+
+    const uploadPhoto = (event) => {
+        const formData = new FormData();
+        formData.append('photo', event.target.files[0]);
+        axios.post(`/machines/${id}/photo`, formData)
+            .then(response => setMachine({ ...machine, photo: response.data.photo }))
+            .catch(error => console.error('Error uploading photo:', error));
     };
 
-    fetchMachine();
+    const startTimer = () => {
+        axios.post(`/machines/${id}/start`)
+            .then(() => setMachine({ ...machine, status: 'Started' }))
+            .catch(error => console.error('Error starting timer:', error));
+    };
 
-    axios.get('/issues-file')
-      .then(response => {
-        const options = response.data.map(issue => ({ value: issue, label: issue }));
-        setIssuesOptions(options);
-      })
-      .catch(error => console.error('Error fetching issues file:', error));
-  }, [id]);
+    const pauseTimer = () => {
+        axios.post(`/machines/${id}/pause`)
+            .then(() => setMachine({ ...machine, status: 'Paused' }))
+            .catch(error => console.error('Error pausing timer:', error));
+    };
 
-  const uploadPhoto = async (event) => {
-    const file = event.target.files[0];
-    const fileRef = ref(storage, `machines/${id}/${file.name}`);
-    try {
-      await uploadBytes(fileRef, file);
-      const photoURL = await getDownloadURL(fileRef);
-      await updateDoc(doc(db, 'machines', id), { photo: photoURL });
-      setMachine(prevMachine => ({ ...prevMachine, photo: photoURL }));
-    } catch (error) {
-      console.error('Error uploading photo:', error);
-    }
-  };
+    const stopTimer = () => {
+        axios.post(`/machines/${id}/stop`)
+            .then(() => setMachine({ ...machine, status: 'Stopped/Finished' }))
+            .catch(error => console.error('Error stopping timer:', error));
+    };
 
-  const startInspectionTimer = async () => {
-    try {
-      await updateDoc(doc(db, 'machines', id), {
-        inspection_start_time: new Date().toISOString(),
-        status: 'Started',
-      });
-      setMachine(prevMachine => ({ ...prevMachine, status: 'Started' }));
-    } catch (error) {
-      console.error('Error starting inspection timer:', error);
-    }
-  };
+    const addIssue = () => {
+        if (!selectedIssue) {
+            alert('Please select an issue.');
+            return;
+        }
+        axios.post(`/machines/${id}/issues`, { issue: selectedIssue.value, note, severity })
+            .then(response => {
+                setMachine({
+                    ...machine,
+                    issues: response.data,
+                });
+                setSelectedIssue(null);
+                setNote('');
+            })
+            .catch(error => console.error('Error adding issue:', error));
+    };
 
-  const pauseInspectionTimer = async () => {
-    const machineDoc = await getDoc(doc(db, 'machines', id));
-    const data = machineDoc.data();
-    const startTime = new Date(data.inspection_start_time);
-    const elapsed = (new Date() - startTime) / 1000;
-    const newTotalTime = data.inspection_total_time + elapsed;
-    try {
-      await updateDoc(doc(db, 'machines', id), {
-        inspection_start_time: null,
-        inspection_total_time: newTotalTime,
-        status: 'Paused',
-      });
-      setMachine(prevMachine => ({ ...prevMachine, status: 'Paused' }));
-    } catch (error) {
-      console.error('Error pausing inspection timer:', error);
-    }
-  };
+    const removeIssue = (issueId) => {
+        axios.delete(`/machines/${id}/issues/${issueId}`)
+            .then(response => {
+                setMachine({
+                    ...machine,
+                    issues: response.data,
+                });
+            })
+            .catch(error => console.error('Error removing issue:', error));
+    };
 
-  const stopInspectionTimer = async () => {
-    const machineDoc = await getDoc(doc(db, 'machines', id));
-    const data = machineDoc.data();
-    const startTime = new Date(data.inspection_start_time);
-    const elapsed = (new Date() - startTime) / 1000;
-    const newTotalTime = data.inspection_total_time + elapsed;
-    try {
-      await updateDoc(doc(db, 'machines', id), {
-        inspection_start_time: null,
-        inspection_total_time: newTotalTime,
-        status: 'Stopped/Finished',
-      });
-      setMachine(prevMachine => ({ ...prevMachine, status: 'Stopped/Finished' }));
-    } catch (error) {
-      console.error('Error stopping inspection timer:', error);
-    }
-  };
+    const updateNote = (issueId) => {
+        axios.put(`/machines/${id}/issues/${issueId}/note`, { note })
+            .then(response => {
+                setMachine({
+                    ...machine,
+                    issues: response.data,
+                });
+            })
+            .catch(error => console.error('Error updating note:', error));
+    };
 
-  const startServicingTimer = async () => {
-    try {
-      await updateDoc(doc(db, 'machines', id), {
-        servicing_start_time: new Date().toISOString(),
-        status: 'Started',
-      });
-      setMachine(prevMachine => ({ ...prevMachine, status: 'Started' }));
-    } catch (error) {
-      console.error('Error starting servicing timer:', error);
-    }
-  };
+    const updateSeverity = (issueId, newSeverity) => {
+        axios.put(`/machines/${id}/issues/${issueId}/severity`, { severity: newSeverity })
+            .then(response => {
+                setMachine({
+                    ...machine,
+                    issues: response.data,
+                });
+            })
+            .catch(error => console.error('Error updating severity:', error));
+    };
 
-  const pauseServicingTimer = async () => {
-    const machineDoc = await getDoc(doc(db, 'machines', id));
-    const data = machineDoc.data();
-    const startTime = new Date(data.servicing_start_time);
-    const elapsed = (new Date() - startTime) / 1000;
-    const newTotalTime = data.servicing_total_time + elapsed;
-    try {
-      await updateDoc(doc(db, 'machines', id), {
-        servicing_start_time: null,
-        servicing_total_time: newTotalTime,
-        status: 'Paused',
-      });
-      setMachine(prevMachine => ({ ...prevMachine, status: 'Paused' }));
-    } catch (error) {
-      console.error('Error pausing servicing timer:', error);
-    }
-  };
+    const getIssueColor = (severity) => {
+        switch (severity) {
+            case 'green':
+                return 'green';
+            case 'yellow':
+                return 'yellow';
+            case 'red':
+                return 'red';
+            default:
+                return 'black';
+        }
+    };
 
-  const stopServicingTimer = async () => {
-    const machineDoc = await getDoc(doc(db, 'machines', id));
-    const data = machineDoc.data();
-    const startTime = new Date(data.servicing_start_time);
-    const elapsed = (new Date() - startTime) / 1000;
-    const newTotalTime = data.servicing_total_time + elapsed;
-    try {
-      await updateDoc(doc(db, 'machines', id), {
-        servicing_start_time: null,
-        servicing_total_time: newTotalTime,
-        status: 'Stopped/Finished',
-      });
-      setMachine(prevMachine => ({ ...prevMachine, status: 'Stopped/Finished' }));
-    } catch (error) {
-      console.error('Error stopping servicing timer:', error);
-    }
-  };
+    if (!machine) return <div>Loading...</div>;
 
-  const addIssue = async () => {
-    if (!selectedIssue) {
-      alert('Please select an issue.');
-      return;
-    }
-    try {
-      await addDoc(collection(db, 'issues'), {
-        machine_id: id,
-        issue: selectedIssue.value,
-        status: 'Pending',
-        note,
-        severity,
-        created_at: new Date().toISOString(),
-      });
-      const issuesQuery = query(collection(db, 'issues'), where('machine_id', '==', id));
-      const issuesSnapshot = await getDocs(issuesQuery);
-      const issues = issuesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setMachine(prevMachine => ({ ...prevMachine, issues }));
-      setSelectedIssue(null);
-      setNote('');
-    } catch (error) {
-      console.error('Error adding issue:', error);
-    }
-  };
-
-  const removeIssue = async (issueId) => {
-    try {
-      await deleteDoc(doc(db, 'issues', issueId));
-      const issuesQuery = query(collection(db, 'issues'), where('machine_id', '==', id));
-      const issuesSnapshot = await getDocs(issuesQuery);
-      const issues = issuesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setMachine(prevMachine => ({ ...prevMachine, issues }));
-    } catch (error) {
-      console.error('Error removing issue:', error);
-    }
-  };
-
-  const updateNote = async (issueId) => {
-    try {
-      await updateDoc(doc(db, 'issues', issueId), { note });
-      const issuesQuery = query(collection(db, 'issues'), where('machine_id', '==', id));
-      const issuesSnapshot = await getDocs(issuesQuery);
-      const issues = issuesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setMachine(prevMachine => ({ ...prevMachine, issues }));
-    } catch (error) {
-      console.error('Error updating note:', error);
-    }
-  };
-
-  const updateSeverity = async (issueId, newSeverity) => {
-    try {
-      await updateDoc(doc(db, 'issues', issueId), { severity: newSeverity });
-      const issuesQuery = query(collection(db, 'issues'), where('machine_id', '==', id));
-      const issuesSnapshot = await getDocs(issuesQuery);
-      const issues = issuesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setMachine(prevMachine => ({ ...prevMachine, issues }));
-    } catch (error) {
-      console.error('Error updating severity:', error);
-    }
-  };
-
-  const getIssueColor = (severity) => {
-    switch (severity) {
-      case 'green':
-        return 'green';
-      case 'yellow':
-        return 'yellow';
-      case 'red':
-        return 'red';
-      default:
-        return 'black';
-    }
-  };
-
-  if (!machine) return <div>Loading...</div>;
-
-  return (
-    <div className="machine-detail-container">
-      <h1>{machine.name}</h1>
-      <p>Status: {machine.status}</p>
-      <p>Worker: {machine.worker_name}</p>
-      <p>Total Time: {machine.total_time}</p>
-      <p>Inspection Time: {machine.inspection_total_time}</p>
-      <p>Servicing Time: {machine.servicing_total_time}</p>
-      <p>Issues:</p>
-      <ul>
-        {machine.issues.map((issue, index) => (
-          <li key={index} style={{ color: getIssueColor(issue.severity) }}>
-            {issue.issue}
-            <input
-              type="text"
-              value={issue.note || ''}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Update Note"
+    return (
+        <div className="machine-detail-container">
+            <h1>{machine.name}</h1>
+            <p>Status: {machine.status}</p>
+            <p>Issues:</p>
+            <ul>
+                {machine.issues.map((issue, index) => (
+                    <li key={index} style={{ color: getIssueColor(issue.severity) }}>
+                        {issue.issue}
+                        <input
+                            type="text"
+                            value={issue.note || ''}
+                            onChange={(e) => setNote(e.target.value)}
+                            placeholder="Update Note"
+                        />
+                        <button onClick={() => updateNote(issue.id)}>Update Note</button>
+                        <select value={issue.severity} onChange={(e) => updateSeverity(issue.id, e.target.value)}>
+                            <option value="green">Perfect</option>
+                            <option value="yellow">Okay</option>
+                            <option value="red">Poor</option>
+                        </select>
+                        <button onClick={() => removeIssue(issue.id)}>Remove</button>
+                    </li>
+                ))}
+            </ul>
+            <input type="file" onChange={uploadPhoto} />
+            <button onClick={startTimer}>Start</button>
+            <button onClick={pauseTimer}>Pause</button>
+            <button onClick={stopTimer}>Stop</button>
+            <Select
+                value={selectedIssue}
+                onChange={setSelectedIssue}
+                options={issuesOptions}
+                placeholder="Select an issue..."
+                isClearable
+                isSearchable
             />
-            <button onClick={() => updateNote(issue.id)}>Update Note</button>
-            <select value={issue.severity} onChange={(e) => updateSeverity(issue.id, e.target.value)}>
-              <option value="green">Perfect</option>
-              <option value="yellow">Okay</option>
-              <option value="red">Poor</option>
+            <input
+                type="text"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Issue Note"
+            />
+            <select value={severity} onChange={(e) => setSeverity(e.target.value)}>
+                <option value="green">Perfect</option>
+                <option value="yellow">Okay</option>
+                <option value="red">Poor</option>
             </select>
-            <button onClick={() => removeIssue(issue.id)}>Remove</button>
-          </li>
-        ))}
-      </ul>
-      <input type="file" onChange={uploadPhoto} />
-      {machine.photo && <img src={machine.photo} alt="Machine" />}
-      <h2>Inspection Timer</h2>
-      <button onClick={startInspectionTimer}>Start Inspection</button>
-      <button onClick={pauseInspectionTimer}>Pause Inspection</button>
-      <button onClick={stopInspectionTimer}>Stop Inspection</button>
-      <h2>Servicing Timer</h2>
-      <button onClick={startServicingTimer}>Start Servicing</button>
-      <button onClick={pauseServicingTimer}>Pause Servicing</button>
-      <button onClick={stopServicingTimer}>Stop Servicing</button>
-      <Select
-        value={selectedIssue}
-        onChange={setSelectedIssue}
-        options={issuesOptions}
-        placeholder="Select an issue..."
-        isClearable
-        isSearchable
-      />
-      <input
-        type="text"
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-        placeholder="Issue Note"
-      />
-      <select value={severity} onChange={(e) => setSeverity(e.target.value)}>
-        <option value="green">Perfect</option>
-        <option value="yellow">Okay</option>
-        <option value="red">Poor</option>
-      </select>
-      <button onClick={addIssue}>Add Issue</button>
-      <Link to="/" className="button">Back</Link>
-    </div>
-  );
+            <button onClick={addIssue}>Add Issue</button>
+            <Link to="/" className="button">Back</Link>
+        </div>
+    );
 };
 
 export default MachineDetail;
-
-function secondsToHMS(seconds) {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  return `${h}:${m < 10 ? '0' : ''}${m}`;
-}
