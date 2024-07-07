@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebaseConfig'; // Use named import
+import { collection, query, onSnapshot, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { Link } from 'react-router-dom';
 import './Home.css';
 
@@ -7,14 +8,16 @@ const Home = () => {
     const [machines, setMachines] = useState([]);
 
     useEffect(() => {
-        const unsubscribe = db.collection('machines').onSnapshot(async snapshot => {
+        const q = query(collection(db, 'machines'));
+        const unsubscribe = onSnapshot(q, async (snapshot) => {
             const machinesData = [];
-            for (const doc of snapshot.docs) {
-                const data = doc.data();
-                const issuesSnapshot = await db.collection('issues').where('machine_id', '==', doc.id).get();
+            for (const docSnap of snapshot.docs) {
+                const data = docSnap.data();
+                const issuesQuery = query(collection(db, 'issues'), where('machine_id', '==', docSnap.id));
+                const issuesSnapshot = await getDocs(issuesQuery);
                 const issues = issuesSnapshot.docs.map(issueDoc => issueDoc.data().issue).join(', ');
                 machinesData.push({
-                    id: doc.id,
+                    id: docSnap.id,
                     ...data,
                     issues,
                     total_time: secondsToHMS(data.total_time),
@@ -41,12 +44,13 @@ const Home = () => {
         }
     };
 
-    const handleRemoveMachine = (id) => {
-        db.collection('machines').doc(id).delete()
-        .then(() => {
+    const handleRemoveMachine = async (id) => {
+        try {
+            await deleteDoc(doc(db, 'machines', id));
             setMachines(machines.filter(machine => machine.id !== id));
-        })
-        .catch(error => console.error('Error removing machine:', error));
+        } catch (error) {
+            console.error('Error removing machine:', error);
+        }
     };
 
     return (
