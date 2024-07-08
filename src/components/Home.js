@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { db } from '../firebaseConfig'; // Use named import
 import { Link } from 'react-router-dom';
 import './Home.css';
 
@@ -7,9 +7,25 @@ const Home = () => {
     const [machines, setMachines] = useState([]);
 
     useEffect(() => {
-        axios.get('/machines')
-            .then(response => setMachines(response.data))
-            .catch(error => console.error('Error fetching machines:', error));
+        const unsubscribe = db.collection('machines').onSnapshot(async snapshot => {
+            const machinesData = [];
+            for (const doc of snapshot.docs) {
+                const data = doc.data();
+                const issuesSnapshot = await db.collection('issues').where('machine_id', '==', doc.id).get();
+                const issues = issuesSnapshot.docs.map(issueDoc => issueDoc.data().issue).join(', ');
+                machinesData.push({
+                    id: doc.id,
+                    ...data,
+                    issues,
+                    total_time: secondsToHMS(data.total_time),
+                    inspection_total_time: secondsToHMS(data.inspection_total_time),
+                    servicing_total_time: secondsToHMS(data.servicing_total_time),
+                });
+            }
+            setMachines(machinesData);
+        });
+
+        return () => unsubscribe();
     }, []);
 
     const getStatusColor = (status) => {
@@ -25,6 +41,14 @@ const Home = () => {
         }
     };
 
+    const handleRemoveMachine = (id) => {
+        db.collection('machines').doc(id).delete()
+        .then(() => {
+            setMachines(machines.filter(machine => machine.id !== id));
+        })
+        .catch(error => console.error('Error removing machine:', error));
+    };
+
     return (
         <div className="home-container">
             <h1>Powersports Shop Management</h1>
@@ -35,8 +59,10 @@ const Home = () => {
                         <th>ID</th>
                         <th>Name</th>
                         <th>Status</th>
+                        <th>Worker</th>
                         <th>Issues</th>
                         <th>Time Spent</th>
+                        <th>Actions</th> {/* Add Actions column */}
                     </tr>
                 </thead>
                 <tbody>
@@ -45,18 +71,24 @@ const Home = () => {
                             <td>{machine.id}</td>
                             <td>{machine.name}</td>
                             <td>{machine.status}</td>
+                            <td>{machine.worker_name}</td>
                             <td>
-                                {machine.issues && machine.issues.split(',').map(issue => (
+                                {machine.issues.split(',').map(issue => (
                                     <div key={issue} style={{ color: getStatusColor(issue.severity) }}>
                                         {issue}
                                     </div>
                                 ))}
                             </td>
                             <td style={{ color: getStatusColor(machine.status) }}>
-                                {machine.total_time}
+                                {`Total: ${machine.total_time}`}
+                                <br />
+                                {`Inspection: ${machine.inspection_total_time}`}
+                                <br />
+                                {`Servicing: ${machine.servicing_total_time}`}
                             </td>
                             <td>
                                 <Link to={`/machines/${machine.id}`} className="button">Details</Link>
+                                <button onClick={() => handleRemoveMachine(machine.id)} className="button">Remove</button> {/* Add Remove button */}
                             </td>
                         </tr>
                     ))}
@@ -67,3 +99,9 @@ const Home = () => {
 };
 
 export default Home;
+
+function secondsToHMS(seconds) {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    return `${h}:${m < 10 ? '0' : ''}${m}`;
+}
