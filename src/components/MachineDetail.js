@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {auth, db, storage} from '../firebaseConfig'; // Use named imports
+import { auth, db, storage } from '../firebaseConfig'; // Use named imports
 import { useParams, Link } from 'react-router-dom';
 import Select from 'react-select';
 import axios from 'axios';
@@ -12,6 +12,7 @@ const MachineDetail = () => {
   const [selectedIssue, setSelectedIssue] = useState(null);
   const [note, setNote] = useState('');
   const [severity, setSeverity] = useState('green');
+  const [issueImage, setIssueImage] = useState(null);
 
   useEffect(() => {
     const fetchMachine = async () => {
@@ -32,22 +33,35 @@ const MachineDetail = () => {
       .catch(error => console.error('Error fetching issues file:', error));
   }, [id]);
 
-  const uploadPhoto = async (event) => {
-      const file = event.target.files[0];
-      const storageRef = storage.ref();
-      const fileRef = storageRef.child(`machines/${id}/${file.name}`);
-  
-      try {
-          await fileRef.put(file);
-          const photoUrl = await fileRef.getDownloadURL();
-          db.collection('machines').doc(id).update({ photo: photoUrl });
-          setMachine(prevMachine => ({ ...prevMachine, photo: photoUrl }));
-      } catch (error) {
-          console.error('Error uploading photo:', error);
+  const uploadPhoto = async (event, type, issueId = null) => {
+    const file = event.target.files[0];
+    const storageRef = storage.ref();
+    let fileRef;
+
+    if (type === 'machine') {
+      fileRef = storageRef.child(`machines/${id}/${file.name}`);
+    } else if (type === 'issue') {
+      fileRef = storageRef.child(`machines/${id}/issues/${issueId}/${file.name}`);
+    }
+
+    try {
+      await fileRef.put(file);
+      const photoUrl = await fileRef.getDownloadURL();
+
+      if (type === 'machine') {
+        db.collection('machines').doc(id).update({ photo: photoUrl });
+        setMachine(prevMachine => ({ ...prevMachine, photo: photoUrl }));
+      } else if (type === 'issue') {
+        db.collection('issues').doc(issueId).update({ photo: photoUrl });
+        setMachine(prevMachine => ({
+          ...prevMachine,
+          issues: prevMachine.issues.map(issue => issue.id === issueId ? { ...issue, photo: photoUrl } : issue)
+        }));
       }
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+    }
   };
-
-
 
   const startInspectionTimer = () => {
     db.collection('machines').doc(id).update({
@@ -148,17 +162,16 @@ const MachineDetail = () => {
       severity,
       created_at: new Date().toISOString(),
     })
-      .then(() => {
-        db.collection('issues').where('machine_id', '==', id).get()
-          .then(snapshot => {
-            const issues = [];
-            snapshot.forEach(doc => {
-              issues.push({ id: doc.id, ...doc.data() });
-            });
-            setMachine(prevMachine => ({ ...prevMachine, issues }));
-            setSelectedIssue(null);
-            setNote('');
-          });
+      .then(async (docRef) => {
+        if (issueImage) {
+          await uploadPhoto({ target: { files: [issueImage] } }, 'issue', docRef.id);
+          setIssueImage(null);
+        }
+        const issuesSnapshot = await db.collection('issues').where('machine_id', '==', id).get();
+        const issues = issuesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setMachine(prevMachine => ({ ...prevMachine, issues }));
+        setSelectedIssue(null);
+        setNote('');
       })
       .catch(error => console.error('Error adding issue:', error));
   };
@@ -166,14 +179,10 @@ const MachineDetail = () => {
   const removeIssue = (issueId) => {
     db.collection('issues').doc(issueId).delete()
       .then(() => {
-        db.collection('issues').where('machine_id', '==', id).get()
-          .then(snapshot => {
-            const issues = [];
-            snapshot.forEach(doc => {
-              issues.push({ id: doc.id, ...doc.data() });
-            });
-            setMachine(prevMachine => ({ ...prevMachine, issues }));
-          });
+        setMachine(prevMachine => ({
+          ...prevMachine,
+          issues: prevMachine.issues.filter(issue => issue.id !== issueId)
+        }));
       })
       .catch(error => console.error('Error removing issue:', error));
   };
@@ -181,14 +190,10 @@ const MachineDetail = () => {
   const updateNote = (issueId) => {
     db.collection('issues').doc(issueId).update({ note })
       .then(() => {
-        db.collection('issues').where('machine_id', '==', id).get()
-          .then(snapshot => {
-            const issues = [];
-            snapshot.forEach(doc => {
-              issues.push({ id: doc.id, ...doc.data() });
-            });
-            setMachine(prevMachine => ({ ...prevMachine, issues }));
-          });
+        setMachine(prevMachine => ({
+          ...prevMachine,
+          issues: prevMachine.issues.map(issue => issue.id === issueId ? { ...issue, note } : issue)
+        }));
       })
       .catch(error => console.error('Error updating note:', error));
   };
@@ -196,14 +201,10 @@ const MachineDetail = () => {
   const updateSeverity = (issueId, newSeverity) => {
     db.collection('issues').doc(issueId).update({ severity: newSeverity })
       .then(() => {
-        db.collection('issues').where('machine_id', '==', id).get()
-          .then(snapshot => {
-            const issues = [];
-            snapshot.forEach(doc => {
-              issues.push({ id: doc.id, ...doc.data() });
-            });
-            setMachine(prevMachine => ({ ...prevMachine, issues }));
-          });
+        setMachine(prevMachine => ({
+          ...prevMachine,
+          issues: prevMachine.issues.map(issue => issue.id === issueId ? { ...issue, severity: newSeverity } : issue)
+        }));
       })
       .catch(error => console.error('Error updating severity:', error));
   };
@@ -249,11 +250,13 @@ const MachineDetail = () => {
               <option value="red">Poor</option>
             </select>
             <button onClick={() => removeIssue(issue.id)}>Remove</button>
+            <input type="file" onChange={(event) => uploadPhoto(event, 'issue', issue.id)} />
+            {issue.photo && <img src={issue.photo} alt="Issue" style={{ width: '50px', height: '50px' }} />}
           </li>
         ))}
       </ul>
-      <input type="file" onChange={uploadPhoto} />
-      {machine.photo && <img src={machine.photo} alt="Machine" />}
+      <input type="file" onChange={(event) => uploadPhoto(event, 'machine')} />
+      {machine.photo && <img src={machine.photo} alt="Machine" style={{ width: '100px', height: '100px' }} />}
       <h2>Inspection Timer</h2>
       <button onClick={startInspectionTimer}>Start Inspection</button>
       <button onClick={pauseInspectionTimer}>Pause Inspection</button>
@@ -281,6 +284,7 @@ const MachineDetail = () => {
         <option value="yellow">Okay</option>
         <option value="red">Poor</option>
       </select>
+      <input type="file" onChange={(e) => setIssueImage(e.target.files[0])} />
       <button onClick={addIssue}>Add Issue</button>
       <Link to="/" className="button">Back</Link>
     </div>
@@ -288,6 +292,19 @@ const MachineDetail = () => {
 };
 
 export default MachineDetail;
+
+function getIssueColor(severity) {
+  switch (severity) {
+    case 'green':
+      return 'green';
+    case 'yellow':
+      return 'yellow';
+    case 'red':
+      return 'red';
+    default:
+      return 'black';
+  }
+}
 
 function secondsToHMS(seconds) {
   const h = Math.floor(seconds / 3600);
