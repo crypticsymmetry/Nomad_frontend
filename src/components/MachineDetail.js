@@ -34,18 +34,19 @@ const MachineDetail = () => {
 
   const uploadPhoto = async (event) => {
       const file = event.target.files[0];
-      const formData = new FormData();
-      formData.append('photo', file);
-
+      const storageRef = storage.ref();
+      const fileRef = storageRef.child(`machines/${id}/${file.name}`);
+  
       try {
-          const response = await axios.post(`/machines/${id}/photo`, formData, {
-              headers: { 'Content-Type': 'multipart/form-data' }
-          });
-          setMachine(prevMachine => ({ ...prevMachine, photo: response.data.photo }));
+          await fileRef.put(file);
+          const photoUrl = await fileRef.getDownloadURL();
+          db.collection('machines').doc(id).update({ photo: photoUrl });
+          setMachine(prevMachine => ({ ...prevMachine, photo: photoUrl }));
       } catch (error) {
           console.error('Error uploading photo:', error);
       }
   };
+
 
 
   const startInspectionTimer = () => {
