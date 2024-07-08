@@ -14,10 +14,6 @@ const firebaseConfig = {
   
 firebase.initializeApp(firebaseConfig);
 
-const db = initializeFirestore(app, {
-  host: "firestore.googleapis.com",
-  ssl: true,
-  databaseId: "nomad-powersport-webapp"
-});
+const db = getFirestore(app);
 
 module.exports = db;
