@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db, storage } from '../firebaseConfig'; // Use named imports
+import { db, storage, bucket } from '../firebaseConfig'; // Use named imports
 import { useParams, Link } from 'react-router-dom';
 import Select from 'react-select';
 import axios from 'axios';
