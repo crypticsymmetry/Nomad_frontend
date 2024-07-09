@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { auth, db, storage } from '../firebaseConfig';
+import { db, storage } from '../firebaseConfig';
 import { useParams, Link } from 'react-router-dom';
 import Select from 'react-select';
 import axios from 'axios';
@@ -15,7 +15,6 @@ const MachineDetail = () => {
   const [issueImage, setIssueImage] = useState(null);
   const [trackingNumber, setTrackingNumber] = useState('');
   const [carrierCode, setCarrierCode] = useState('');
-  const [trackingData, setTrackingData] = useState(null);
 
   useEffect(() => {
     const fetchMachine = async () => {
