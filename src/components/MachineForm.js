@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { db } from '../firebaseConfig'; // Use named import
+import { db } from '../firebaseConfig';
 import { useHistory } from 'react-router-dom';
+import './MachineForm.css';
 
 const MachineForm = () => {
     const [name, setName] = useState('');
@@ -25,22 +26,24 @@ const MachineForm = () => {
     };
 
     return (
-        <form onSubmit={handleSubmit}>
+        <div className="machine-detail-container">
             <h1>Add Machine</h1>
-            <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Machine Name"
-            />
-            <input
-                type="text"
-                value={workerName}
-                onChange={(e) => setWorkerName(e.target.value)}
-                placeholder="Worker Name"
-            />
-            <button type="submit">Add Machine</button>
-        </form>
+            <form onSubmit={handleSubmit}>
+                <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Machine Name"
+                />
+                <input
+                    type="text"
+                    value={workerName}
+                    onChange={(e) => setWorkerName(e.target.value)}
+                    placeholder="Worker Name"
+                />
+                <button type="submit" className="button">Add Machine</button>
+            </form>
+        </div>
     );
 };
 
