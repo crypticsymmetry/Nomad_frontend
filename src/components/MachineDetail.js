@@ -264,13 +264,17 @@ const MachineDetail = () => {
         ))}
       </ul>
       <h2>Inspection Timer</h2>
-      <button onClick={startInspectionTimer}>Start Inspection</button>
-      <button onClick={pauseInspectionTimer}>Pause Inspection</button>
-      <button onClick={stopInspectionTimer}>Stop Inspection</button>
+      <div className="button-container">
+        <button className="button" onClick={startInspectionTimer}>Start Inspection</button>
+        <button className="button" onClick={pauseInspectionTimer}>Pause Inspection</button>
+        <button className="button" onClick={stopInspectionTimer}>Stop Inspection</button>
+      </div>
       <h2>Servicing Timer</h2>
-      <button onClick={startServicingTimer}>Start Servicing</button>
-      <button onClick={pauseServicingTimer}>Pause Servicing</button>
-      <button onClick={stopServicingTimer}>Stop Servicing</button>
+      <div className="button-container">
+        <button className="button" onClick={startServicingTimer}>Start Servicing</button>
+        <button className="button" onClick={pauseServicingTimer}>Pause Servicing</button>
+        <button className="button" onClick={stopServicingTimer}>Stop Servicing</button>
+      </div>
       <Select
         value={selectedIssue}
         onChange={setSelectedIssue}
@@ -291,7 +295,7 @@ const MachineDetail = () => {
         <option value="red">Poor</option>
       </select>
       <input type="file" onChange={(e) => setIssueImage(e.target.files[0])} />
-      <button onClick={addIssue}>Add Issue</button>
+      <button className="button" onClick={addIssue}>Add Issue</button>
       <Link to="/" className="button">Back</Link>
     </div>
   );
