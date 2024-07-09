@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../firebaseConfig'; // Use named import
+import { db } from '../firebaseConfig';
 import { Link } from 'react-router-dom';
 import './Home.css';
 
@@ -62,7 +62,7 @@ const Home = () => {
                         <th>Worker</th>
                         <th>Issues</th>
                         <th>Time Spent</th>
-                        <th>Actions</th> {/* Add Actions column */}
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -70,16 +70,12 @@ const Home = () => {
                         <tr key={machine.id}>
                             <td>{machine.id}</td>
                             <td>{machine.name}</td>
-                            <td>{machine.status}</td>
+                            <td style={{ color: getStatusColor(machine.status) }}>{machine.status}</td>
                             <td>{machine.worker_name}</td>
+                            <td>{machine.issues.split(',').map(issue => (
+                                <div key={issue}>{issue}</div>
+                            ))}</td>
                             <td>
-                                {machine.issues.split(',').map(issue => (
-                                    <div key={issue} style={{ color: getStatusColor(issue.severity) }}>
-                                        {issue}
-                                    </div>
-                                ))}
-                            </td>
-                            <td style={{ color: getStatusColor(machine.status) }}>
                                 {`Total: ${machine.total_time}`}
                                 <br />
                                 {`Inspection: ${machine.inspection_total_time}`}
@@ -88,7 +84,7 @@ const Home = () => {
                             </td>
                             <td>
                                 <Link to={`/machines/${machine.id}`} className="button">Details</Link>
-                                <button onClick={() => handleRemoveMachine(machine.id)} className="button">Remove</button> {/* Add Remove button */}
+                                <button onClick={() => handleRemoveMachine(machine.id)} className="button">Remove</button>
                             </td>
                         </tr>
                     ))}
