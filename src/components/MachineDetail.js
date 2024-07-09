@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { auth, db, storage } from '../firebaseConfig'; // Use named imports
+import { auth, db, storage } from '../firebaseConfig';
 import { useParams, Link } from 'react-router-dom';
 import Select from 'react-select';
 import axios from 'axios';
@@ -226,13 +226,21 @@ const MachineDetail = () => {
 
   return (
     <div className="machine-detail-container">
-      <h1>{machine.name}</h1>
-      <p>Status: {machine.status}</p>
-      <p>Worker: {machine.worker_name}</p> {/* Display the worker name */}
-      <p>Total Time: {machine.total_time}</p>
-      <p>Inspection Time: {machine.inspection_total_time}</p>
-      <p>Servicing Time: {machine.servicing_total_time}</p>
-      <p>Issues:</p>
+      <div className="machine-header">
+        <div className="machine-info">
+          <h1>{machine.name}</h1>
+          <p>Status: {machine.status}</p>
+          <p>Worker: {machine.worker_name}</p>
+          <p>Total Time: {machine.total_time}</p>
+          <p>Inspection Time: {machine.inspection_total_time}</p>
+          <p>Servicing Time: {machine.servicing_total_time}</p>
+        </div>
+        <div className="machine-image">
+          <input type="file" onChange={(event) => uploadPhoto(event, 'machine')} />
+          {machine.photo && <img src={machine.photo} alt="Machine" style={{ width: '100px', height: '100px' }} />}
+        </div>
+      </div>
+      <h2>Issues:</h2>
       <ul>
         {machine.issues.map((issue, index) => (
           <li key={index} style={{ color: getIssueColor(issue.severity) }}>
@@ -255,8 +263,6 @@ const MachineDetail = () => {
           </li>
         ))}
       </ul>
-      <input type="file" onChange={(event) => uploadPhoto(event, 'machine')} />
-      {machine.photo && <img src={machine.photo} alt="Machine" style={{ width: '100px', height: '100px' }} />}
       <h2>Inspection Timer</h2>
       <button onClick={startInspectionTimer}>Start Inspection</button>
       <button onClick={pauseInspectionTimer}>Pause Inspection</button>
