@@ -13,6 +13,9 @@ const MachineDetail = () => {
   const [note, setNote] = useState('');
   const [severity, setSeverity] = useState('green');
   const [issueImage, setIssueImage] = useState(null);
+  const [trackingNumber, setTrackingNumber] = useState('');
+  const [carrierCode, setCarrierCode] = useState('');
+  const [trackingData, setTrackingData] = useState(null);
 
   useEffect(() => {
     const fetchMachine = async () => {
@@ -161,6 +164,8 @@ const MachineDetail = () => {
       note,
       severity,
       created_at: new Date().toISOString(),
+      trackingNumber: '',
+      carrierCode: '',
     })
       .then(async (docRef) => {
         if (issueImage) {
@@ -174,6 +179,20 @@ const MachineDetail = () => {
         setNote('');
       })
       .catch(error => console.error('Error adding issue:', error));
+  };
+
+  const updateTrackingInfo = (issueId) => {
+    db.collection('issues').doc(issueId).update({
+      trackingNumber,
+      carrierCode,
+    })
+      .then(() => {
+        setMachine(prevMachine => ({
+          ...prevMachine,
+          issues: prevMachine.issues.map(issue => issue.id === issueId ? { ...issue, trackingNumber, carrierCode } : issue)
+        }));
+      })
+      .catch(error => console.error('Error updating tracking info:', error));
   };
 
   const removeIssue = (issueId) => {
@@ -260,6 +279,26 @@ const MachineDetail = () => {
             <button onClick={() => removeIssue(issue.id)}>Remove</button>
             <input type="file" onChange={(event) => uploadPhoto(event, 'issue', issue.id)} />
             {issue.photo && <img src={issue.photo} alt="Issue" style={{ width: '50px', height: '50px' }} />}
+            <input
+              type="text"
+              value={issue.trackingNumber || ''}
+              onChange={(e) => setTrackingNumber(e.target.value)}
+              placeholder="Tracking Number"
+            />
+            <select value={issue.carrierCode || ''} onChange={(e) => setCarrierCode(e.target.value)}>
+              <option value="">Select Carrier</option>
+              <option value="ups">UPS</option>
+              <option value="usps">USPS</option>
+              <option value="fedex">FedEx</option>
+              <option value="stamps_com">Stamps.com</option>
+            </select>
+            <button onClick={() => updateTrackingInfo(issue.id)}>Update Tracking Info</button>
+            {issue.trackingData && (
+              <div>
+                <h3>Tracking Info:</h3>
+                <pre>{JSON.stringify(issue.trackingData, null, 2)}</pre>
+              </div>
+            )}
           </li>
         ))}
       </ul>
